@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: reelvault_api_postgres_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: reelvault-api
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345678
+
+  backend:
+    build: .
+    container_name: reelvault_api_backend
+    ports:
+    - "4000:4000"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: 12345678
+      DB_NAME: reelvault-api
+    depends_on:
+      - postgres
+    command: sh -c "./wait-for-it.sh postgres:5432 -- npm run migration:run && npm run start:prod"
