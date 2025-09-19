@@ -14,6 +14,14 @@ import { CommentsService } from './comments.service'
 import { CommentsEntity } from '../db/entities/comments.entity'
 import { AuthGuard } from 'src/auth/auth.guard'
 import { Request } from 'express'
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiParam
+} from '@nestjs/swagger'
 
 declare module 'express' {
   interface Request {
@@ -21,11 +29,33 @@ declare module 'express' {
   }
 }
 
+@ApiTags('Comments')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(AuthGuard)
 @Controller('comments')
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
+  @ApiOperation({ summary: 'Adiciona comentário ao filme (autenticado)' })
+  @ApiBody({
+    type: CommentsDto,
+    examples: {
+      exemplo: {
+        value: {
+          movie_id: 123,
+          title: 'Ótimo filme!',
+          content: 'Gostei muito.',
+          rating: 5,
+          isrecommended: true
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Comentário criado',
+    type: CommentsEntity
+  })
   @Post()
   async create(
     @Body() dto: CommentsDto,
@@ -43,6 +73,13 @@ export class CommentsController {
     throw new Error('Failed to create comment')
   }
 
+  @ApiOperation({ summary: 'Lista comentários de um filme (público)' })
+  @ApiParam({ name: 'movie_id', example: 123 })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de comentários',
+    type: [CommentsEntity]
+  })
   @Get(':movie_id')
   async getByMovieId(
     @Param('movie_id') movie_id: number
@@ -55,6 +92,29 @@ export class CommentsController {
     }
   }
 
+  @ApiOperation({
+    summary: 'Atualiza comentário (autenticado)'
+  })
+  @ApiParam({ name: 'id', example: 'uuid-do-comentario' })
+  @ApiBody({
+    type: CommentsDto,
+    examples: {
+      exemplo: {
+        value: {
+          movie_id: 123,
+          title: 'Filme chato!',
+          content: 'Não gostei muito.',
+          rating: 3,
+          isrecommended: false
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Comentário atualizado',
+    type: CommentsEntity
+  })
   @Put(':id')
   async update(
     @Param('id') id: number,
@@ -63,6 +123,13 @@ export class CommentsController {
     return this.commentsService.update(id, dto)
   }
 
+  @ApiOperation({ summary: 'Remove comentário (autenticado)' })
+  @ApiParam({ name: 'id', example: 'uuid-do-comentario' })
+  @ApiResponse({
+    status: 200,
+    description: 'Comentário removido',
+    schema: { example: { success: true } }
+  })
   @Delete(':id')
   async remove(@Param('id') id: number): Promise<{ success: boolean }> {
     await this.commentsService.remove(id)

@@ -13,6 +13,14 @@ import { FavoritesDto } from './favorites.dto'
 import { FavoritesEntity } from '../db/entities/favorites.entity'
 import { AuthGuard } from 'src/auth/auth.guard'
 import { Request } from 'express'
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiParam
+} from '@nestjs/swagger'
 
 declare module 'express' {
   interface Request {
@@ -20,11 +28,33 @@ declare module 'express' {
   }
 }
 
+@ApiTags('Favorites')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(AuthGuard)
 @Controller('favorites')
 export class FavoritesController {
   constructor(private readonly favoritesService: FavoritesService) {}
 
+  @ApiOperation({
+    summary: 'Adiciona filme aos favoritos do usuário autenticado'
+  })
+  @ApiBody({
+    type: FavoritesDto,
+    examples: {
+      exemplo: {
+        value: {
+          movie_id: 123,
+          poster_path: '/poster/path.jpg',
+          title: 'O Poderoso Chefão'
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Favorito criado',
+    type: FavoritesEntity
+  })
   @Post()
   async create(
     @Body() dto: FavoritesDto,
@@ -38,6 +68,13 @@ export class FavoritesController {
     return this.favoritesService.create(dto)
   }
 
+  @ApiOperation({ summary: 'Lista favoritos do usuário' })
+  @ApiParam({ name: 'user_id', example: 'uuid-do-usuario' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de favoritos',
+    type: [FavoritesEntity]
+  })
   @Get('user/:user_id')
   async getByUser(
     @Param('user_id') user_id: string
@@ -45,6 +82,13 @@ export class FavoritesController {
     return this.favoritesService.findByUserId(user_id)
   }
 
+  @ApiOperation({ summary: 'Remove favorito do usuário autenticado' })
+  @ApiParam({ name: 'id', example: 1 })
+  @ApiResponse({
+    status: 200,
+    description: 'Favorito removido com sucesso',
+    schema: { example: { message: 'Favorito removido com sucesso' } }
+  })
   @Delete(':id')
   async remove(
     @Param('id') id: number,
@@ -54,7 +98,6 @@ export class FavoritesController {
     if (!user || !user.sub) {
       throw new Error('Usuário não autenticado ou token JWT inválido')
     }
-    // Opcional: você pode garantir que o favorito pertence ao usuário antes de remover
     await this.favoritesService.removeByIdAndUser(id, String(user.sub))
     return { message: 'Favorito removido com sucesso' }
   }
